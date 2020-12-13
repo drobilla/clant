@@ -22,7 +22,7 @@ __author__ = "David Robillard"
 __date__ = "2020-12-13"
 __email__ = "d@drobilla.net"
 __license__ = "ISC"
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 
 class ConfigurationError(RuntimeError):
@@ -149,21 +149,6 @@ def _header_extensions(source):
     return []
 
 
-def _fix_path(path):
-    """
-    Convert a relative path to the absolute format used by clang-tidy.
-
-    It would be nicer to use canonical real paths here, but for consistency
-    with the output of clang-tidy, we just join the path to the absolute build
-    directory (which is the current directory).  Unfortunately, this may
-    contain things like "build/../src", but this avoids needing to also process
-    the output of clang-tidy and/or mess around with the paths in the
-    compilation database.
-    """
-
-    return os.path.join(os.path.abspath("."), path)
-
-
 def _run_clang_tidy(options, source, command, lock):
     """Run clang-tidy on a file in a thread."""
 
@@ -187,8 +172,7 @@ def _run_clang_tidy(options, source, command, lock):
 
     with lock:
         if proc.returncode == 0:
-            path = _fix_path(source)
-            sys.stdout.write("%s:1:1: note: code is tidy\n" % path)
+            sys.stdout.write("%s:1:1: note: code is tidy\n" % source)
 
         if len(proc.stdout) > 0:
             sys.stdout.write(proc.stdout.decode("utf-8"))
@@ -223,17 +207,17 @@ def _iwyu_output_formatter(output):
 
         match = correct_re.match(line)
         if match:
-            path = _fix_path(match.group(1))
+            path = match.group(1)
             result.append("%s:1:1: note: includes are correct" % path)
             return (General(), True)
 
         match = should_add_re.match(line)
         if match:
-            return (Add(_fix_path(match.group(1))), True)
+            return (Add(match.group(1)), True)
 
         match = should_remove_re.match(line)
         if match:
-            return (Remove(_fix_path(match.group(1))), True)
+            return (Remove(match.group(1)), True)
 
         return (state, False)
 

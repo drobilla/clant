@@ -15,6 +15,25 @@ running these tools on a project with nice output.  Tools are run in parallel
 for maximum speed, and output is printed in the standard make and GCC format
 supported by most editors.
 
+Example
+-------
+
+Using Clant looks something like this:
+
+    $ cd /someproject
+    $ clant
+    clant: Entering directory `/someproject/build'
+    clant: Loading compilation database `compile_commands.json'
+    ../include/someproject/someproject.h:1:1: note: includes are correct
+    ../test/test_something.c:80:15: warning: initializing 'char *const' with an expression of type 'const char *const' discards qualifiers [-Wincompatible-pointer-types-discards-qualifiers]
+                    char* const string = tests[i].expected;
+                                ^        ~~~~~~~~~~~~~~~~~
+
+    ../test/test_something.c:26:1: error: remove this line
+    #include <stdlib.h>
+    ../src/someproject.c:1:1: note: code is tidy
+    clant: Leaving directory `/someproject/build/build'
+
 Installation
 ------------
 
@@ -168,7 +187,7 @@ For example, this configuration uses all of the supported keys:
   "mapping_files": ["qt5_11.imp"],
   "tidy": true,
   "verbose": false,
-  "version": "0.0.3"
+  "version": "0.0.4"
 }
 ```
 
