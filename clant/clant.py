@@ -22,7 +22,7 @@ __author__ = "David Robillard"
 __date__ = "2020-12-13"
 __email__ = "d@drobilla.net"
 __license__ = "ISC"
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 
 class ConfigurationError(RuntimeError):
@@ -559,39 +559,34 @@ def main():
     """Run the command line tool."""
 
     parser = argparse.ArgumentParser(
-        usage="%(prog)s [OPTION]...",
+        usage="%(prog)s [OPTION]... [BUILD_DIR]",
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     parser.add_argument(
-        "-p",
-        "--build-dir",
-        metavar="DIR",
-        default="build",
-        help="path to build directory.  "
-        'Default is "build" in the current directory.',
-    )
-
-    parser.add_argument(
-        "-x",
         "--exclude",
         metavar="REGEX",
         dest="exclude_patterns",
         default=[],
         action="append",
-        help="regular expression for files to ignore.",
+        help="regular expression for files to ignore",
     )
 
     parser.add_argument(
-        "-I",
         "--include",
         metavar="DIR",
         dest="include_dirs",
         default=[],
         action="append",
-        help="directory of extra headers to check.  "
-        'If none are given, defaults to every directory named "include".',
+        help="directory of extra headers to check",
+    )
+
+    parser.add_argument(
+        "-j",
+        metavar="JOBS",
+        type=int,
+        help="maximum number of parallel tasks",
     )
 
     parser.add_argument(
@@ -600,50 +595,49 @@ def main():
         dest="mapping_files",
         default=[],
         action="append",
-        help="add include-what-you-use mapping file.",
+        help="add include-what-you-use mapping file",
     )
 
     parser.add_argument(
         "--no-auto-headers",
         dest="auto_headers",
         action="store_false",
-        help="don't override clang-tidy header regex based on language.",
+        help="don't override clang-tidy header regex based on language",
     )
 
     parser.add_argument(
         "--no-iwyu",
         dest="iwyu",
         action="store_false",
-        help="don't run include-what-you-use.",
+        help="don't run include-what-you-use",
     )
 
     parser.add_argument(
         "--no-tidy",
         dest="tidy",
         action="store_false",
-        help="don't run clang-tidy.",
-    )
-
-    parser.add_argument(
-        "-j",
-        "--jobs",
-        metavar="COUNT",
-        type=int,
-        help="maximum number of parallel tasks.",
+        help="don't run clang-tidy",
     )
 
     parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
-        help="print all executed commands.",
+        help="print all executed commands",
     )
 
     parser.add_argument(
         "-V",
         "--version",
         action="store_true",
-        help="print version information and exit.",
+        help="print version information and exit",
+    )
+
+    parser.add_argument(
+        "build_dir",
+        nargs="?",
+        default="build",
+        help='path to build directory (default: "build")',
     )
 
     args = parser.parse_args(sys.argv[1:])

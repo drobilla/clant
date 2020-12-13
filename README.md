@@ -65,13 +65,13 @@ Ideally, you can simply run clant from your project directory:
     clant
 
 Clant will assume that a build exists in the `build` subdirectory, and look for
-`compile_commands.json` there.  To use a different build directory, use the
-`--build-dir` option:
+`compile_commands.json` there.  To use a different build directory, pass it as
+a parameter:
 
-    clant --build-dir release
+    clant release
 
 By default, the number of threads supported by the CPU will be used.  To use a
-different number of threads, use the `-j` or `--jobs` option:
+different number of threads, use the `-j` option:
 
     clant -j 4
 
@@ -86,10 +86,10 @@ working on issues:
 Clant attempts to run tools in a way that automatically includes appropriate
 headers in checks, but this may miss headers that are not included in the
 build, or that are not inside the project directory.  Additional headers can be
-checked by providing include directories with the `-I` or `--include` option.
+checked by providing include directories with the `--include` option.
 This will run checks on all the headers in that directory, recursively:
 
-    clant -I include
+    clant --include include
 
 ### Include Mapping Files
 
@@ -194,7 +194,7 @@ For example, this configuration uses all of the supported keys:
   "mapping_files": ["qt5_11.imp"],
   "tidy": true,
   "verbose": false,
-  "version": "0.0.4"
+  "version": "0.0.5"
 }
 ```
 
