@@ -4,6 +4,8 @@ setup(
     name="clant",
     version="0.0.1",
     description="A unified frontend for clang linting tools",
+    long_description=open('README.md', 'r').read(),
+    long_description_content_type='text/markdown',
     url="https://gitlab.com/drobilla/clant",
     author="David Robillard",
     author_email="d@drobilla.net",
