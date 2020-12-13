@@ -194,7 +194,7 @@ For example, this configuration uses all of the supported keys:
   "mapping_files": ["qt5_11.imp"],
   "tidy": true,
   "verbose": false,
-  "version": "0.0.5"
+  "version": "1.0.0"
 }
 ```
 
