@@ -22,7 +22,7 @@ __author__ = "David Robillard"
 __date__ = "2020-12-13"
 __email__ = "d@drobilla.net"
 __license__ = "ISC"
-__version__ = "0.0.1"
+__version__ = "0.0.3"
 
 
 class ConfigurationError(RuntimeError):
@@ -469,11 +469,13 @@ def _load_configuration(config_path, config):
 
 
 def _get_configuration(project_dir, args):
-    # Start with default configuration
-    config = _default_configuration()
+    # Start with options provided by the user
+    config = args
 
-    # Set any options provided by the user
-    config.update(args)
+    # Add defaults for any missing keys
+    for key, value in _default_configuration().items():
+        if key not in config or config[key] is None:
+            config[key] = value
 
     # Load configuration file if present
     config_path = os.path.join(project_dir, ".clant.json")
