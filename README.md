@@ -25,16 +25,16 @@ Using Clant looks something like this:
     clant: Entering directory `/mylib/build'
     clant: Loading compilation database `compile_commands.json'
     ../include/mylib/mylib.h:1:1: note: includes are correct
-    ../src/mylib.c:239:1: error: function 'do_something' has a definition with different parameter names [readability-inconsistent-declaration-parameter-name,-warnings-as-errors]
-    do_something(Thing* result);
+    ../src/mylib.c:239:1: error: function 'run' has a definition with different parameter names [readability-inconsistent-declaration-parameter-name,-warnings-as-errors]
+    run(Thing* result);
     ^
     ../src/mylib.c:576:1: note: the definition seen here
-    do_something(Thing* out)
+    run(Thing* out)
     ^
     ../src/rerex.c:239:1: note: differing parameters are named here: ('result'), in definition: ('out')
-    read_expr(Something* result);
-    ^                    ~~~~~~
-                         out
+    run(Something* result);
+    ^              ~~~~~~
+                   out
 
     ../test/test_something.c:26:1: error: remove this line
     #include <stdlib.h>
