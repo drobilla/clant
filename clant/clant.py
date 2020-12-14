@@ -22,7 +22,7 @@ __author__ = "David Robillard"
 __date__ = "2020-12-13"
 __email__ = "d@drobilla.net"
 __license__ = "ISC"
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 class ConfigurationError(RuntimeError):
@@ -517,10 +517,9 @@ def run(build_dir, **kwargs):
     headers = _get_header_files(include_dirs)
 
     # Filter out excluded files and files in the build directory
-    if len(config["exclude_patterns"]) > 0:
-        sources, headers = _filter_files(
-            sources, headers, config["exclude_patterns"]
-        )
+    sources, headers = _filter_files(
+        sources, headers, config["exclude_patterns"]
+    )
 
     # Generate list of all tasks
     tasks = []

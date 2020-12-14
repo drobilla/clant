@@ -1,3 +1,9 @@
+clant (1.0.1) unstable;
+
+  * Avoid running tools on sources in the build directory
+
+ -- David Robillard <d@drobilla.net>  Mon, 14 Dec 2020 13:22:47 +0000
+
 clant (1.0.0) stable;
 
   * Initial release
