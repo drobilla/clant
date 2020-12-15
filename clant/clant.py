@@ -173,6 +173,8 @@ def _run_clang_tidy(options, source, command, lock):
     with lock:
         if proc.returncode == 0:
             sys.stdout.write("%s:1:1: note: code is tidy\n" % source)
+        else:
+            print("%s:1:1: error: clang-tidy issues from here:" % source)
 
         if len(proc.stdout) > 0:
             sys.stdout.write(proc.stdout.decode("utf-8"))
