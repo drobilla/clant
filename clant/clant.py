@@ -243,7 +243,7 @@ def _iwyu_output_formatter(output):
             )
             result.append(match.group(1))
 
-    return os.linesep.join(result)
+    return result
 
 
 def _run_iwyu(options, source, command, lock):
@@ -272,7 +272,10 @@ def _run_iwyu(options, source, command, lock):
     sensible_output = _iwyu_output_formatter(proc.stderr.decode("utf-8"))
 
     with lock:
-        print(sensible_output)
+        if len(sensible_output) == 0:
+            print("%s:1:1: warning: include-what-you-use failed" % source)
+        else:
+            print(os.linesep.join(sensible_output))
 
 
 def _task_thread(task_queue, options, lock):
