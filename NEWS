@@ -1,11 +1,12 @@
 clant (1.0.1) unstable;
 
   * Avoid running tools on sources in the build directory
+  * Fix the jobs command line parameter
   * Print a warning when include-what-you-use fails
   * Print quoted includes first
   * Print the context of clang-tidy errors
 
- -- David Robillard <d@drobilla.net>  Tue, 15 Dec 2020 18:47:45 +0000
+ -- David Robillard <d@drobilla.net>  Tue, 15 Dec 2020 18:51:59 +0000
 
 clant (1.0.0) stable;
 

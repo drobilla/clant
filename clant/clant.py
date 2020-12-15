@@ -390,7 +390,30 @@ def _parse_version(version_string):
     return version
 
 
-def _load_configuration(config_path, config):
+def _update_configuration(config, update):
+    """Update configuration with values from another."""
+
+    for key, value in update.items():
+        if key in [
+            "auto_headers",
+            "build_dir",
+            "iwyu",
+            "tidy",
+            "jobs",
+            "verbose",
+        ]:
+            if value is not None:
+                config[key] = value
+        elif key in ["mapping_files", "exclude_patterns", "include_dirs"]:
+            if value is not None:
+                config[key] += value
+        elif key != "version":
+            _warning("Unknown configuration key `%s'" % key)
+
+    return config
+
+
+def _load_configuration(config_path):
     """
     Load additional configuration from a .clang.json file.
 
@@ -430,50 +453,48 @@ def _load_configuration(config_path, config):
         for key, value in file_config.items():
             if key == "auto_headers":
                 check_type(key, value, bool)
-                config[key] = value
             elif key == "build_dir":
                 check_type(key, value, str)
-                config[key] = value
             elif key in ["exclude_patterns", "include_dirs"]:
                 check_type(key, value, list)
                 check_element_type(key, value, str)
-                config[key] += value
             elif key in ["iwyu", "tidy"]:
                 check_type(key, value, bool)
-                config[key] = value
             elif key == "jobs":
                 check_type(key, value, int)
-                config[key] = value
             elif key == "mapping_files":
                 check_type(key, value, list)
                 check_element_type(key, value, str)
-                config[key] += [
+                file_config[key] = [
                     find_mapping_file(project_dir, f) for f in value
                 ]
             elif key == "verbose":
                 check_type(key, value, bool)
-                config[key] = value
             elif key != "version":
                 _warning("Unknown configuration key `%s'" % key)
 
-    return config
+        return file_config
 
 
 def _get_configuration(project_dir, args):
-    # Start with options provided by the user
-    config = args
+    """
+    Get the final configuration to use.
 
-    # Add defaults for any missing keys
-    for key, value in _default_configuration().items():
-        if key not in config or config[key] is None:
-            config[key] = value
+    This merges the defaults, file configuration if present, and command line
+    arguments, in that order of priority.
+    """
 
-    # Load configuration file if present
+    # Start with the default configuration
+    config = _default_configuration()
+
+    # Update with values from configuration file if present
     config_path = os.path.join(project_dir, ".clant.json")
     if os.path.exists(config_path):
-        config = _load_configuration(config_path, config)
+        file_config = _load_configuration(config_path)
+        config = _update_configuration(config, file_config)
 
-    return config
+    # Finally update with values provided by the user
+    return _update_configuration(config, args)
 
 
 def run(build_dir, **kwargs):
@@ -591,6 +612,7 @@ def main():
     parser.add_argument(
         "-j",
         metavar="JOBS",
+        dest="jobs",
         type=int,
         help="maximum number of parallel tasks",
     )
