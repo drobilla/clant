@@ -1,8 +1,9 @@
 clant (1.0.1) unstable;
 
   * Avoid running tools on sources in the build directory
+  * Print quoted includes first
 
- -- David Robillard <d@drobilla.net>  Mon, 14 Dec 2020 13:22:47 +0000
+ -- David Robillard <d@drobilla.net>  Tue, 15 Dec 2020 00:59:31 +0000
 
 clant (1.0.0) stable;
 

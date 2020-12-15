@@ -249,13 +249,15 @@ def _iwyu_output_formatter(output):
 def _run_iwyu(options, source, command, lock):
     """Run include-what-you-use on a file in a thread."""
 
+    cmd = ["include-what-you-use", "-Xiwyu", "--quoted_includes_first"]
+
     if command is None:
         # Run on extra header using the aggregated include flags
-        cmd = ["include-what-you-use"] + options.include_flags + [source]
+        cmd += options.include_flags + [source]
         proc = _run_command(options, cmd)
     else:
         # Run on normal source file with a compile command
-        cmd = ["include-what-you-use"] + command[1:]
+        cmd += command[1:]
 
         for mapping_file in options.mapping_files:
             cmd += ["-Xiwyu", "--mapping_file=" + mapping_file]
