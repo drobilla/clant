@@ -253,6 +253,9 @@ def _run_iwyu(options, source, command, lock):
 
     cmd = ["include-what-you-use", "-Xiwyu", "--quoted_includes_first"]
 
+    for mapping_file in options.mapping_files:
+        cmd += ["-Xiwyu", "--mapping_file=" + mapping_file]
+
     if command is None:
         # Run on extra header using the aggregated include flags
         cmd += options.include_flags + [source]
@@ -260,9 +263,6 @@ def _run_iwyu(options, source, command, lock):
     else:
         # Run on normal source file with a compile command
         cmd += command[1:]
-
-        for mapping_file in options.mapping_files:
-            cmd += ["-Xiwyu", "--mapping_file=" + mapping_file]
 
         # Include headers in the same language
         # This avoids things like suggesting to remove stdbool.h in C headers
