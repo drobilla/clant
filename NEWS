@@ -1,4 +1,4 @@
-clant (1.0.1) unstable;
+clant (1.0.2) stable;
 
   * Avoid running tools on sources in the build directory
   * Fix the jobs command line parameter
@@ -8,7 +8,7 @@ clant (1.0.1) unstable;
   * Print the context of clang-tidy errors
   * Use include mapping files when checking extra headers
 
- -- David Robillard <d@drobilla.net>  Wed, 06 Jan 2021 22:38:32 +0000
+ -- David Robillard <d@drobilla.net>  Wed, 06 Jan 2021 22:39:49 +0000
 
 clant (1.0.0) stable;
 
