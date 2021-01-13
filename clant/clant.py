@@ -179,6 +179,8 @@ def _run_clang_tidy(options, source, command, lock):
         if len(proc.stdout) > 0:
             sys.stdout.write(proc.stdout.decode("utf-8"))
 
+    return proc.returncode
+
 
 def _iwyu_output_formatter(output):
     """Convert IWYU output to standard compiler format.
@@ -224,6 +226,7 @@ def _iwyu_output_formatter(output):
         return (state, False)
 
     state = General()
+    has_errors = False
     for line in output.splitlines():
         if len(line.strip()) == 0:
             continue
@@ -235,9 +238,11 @@ def _iwyu_output_formatter(output):
         if isinstance(state, General):
             result.append(line)
         elif isinstance(state, Add):
+            has_errors = True
             result.append("%s:1:1: error: add the following line" % state.path)
             result.append(line)
         elif isinstance(state, Remove):
+            has_errors = True
             match = lines_re.match(line)
             line = match.group(2) if match else "1"
             result.append(
@@ -245,7 +250,7 @@ def _iwyu_output_formatter(output):
             )
             result.append(match.group(1))
 
-    return result
+    return (result, has_errors)
 
 
 def _run_iwyu(options, source, command, lock):
@@ -271,7 +276,7 @@ def _run_iwyu(options, source, command, lock):
 
         proc = _run_command(options, cmd)
 
-    sensible_output = _iwyu_output_formatter(proc.stderr.decode("utf-8"))
+    sensible_output, has_errors = _iwyu_output_formatter(proc.stderr.decode("utf-8"))
 
     with lock:
         if len(sensible_output) == 0:
@@ -279,13 +284,18 @@ def _run_iwyu(options, source, command, lock):
         else:
             print(os.linesep.join(sensible_output))
 
+    return 1 if has_errors else 0
 
-def _task_thread(task_queue, options, lock):
+
+def _task_thread(task_queue, error_queue, options, lock):
     """Thread that executes tasks from a queue until the queue is empty."""
 
     while not task_queue.empty():
         task = task_queue.get()
-        task.func(options, task.source, task.command, lock)
+
+        if task.func(options, task.source, task.command, lock) != 0:
+            error_queue.put(1)
+
         task_queue.task_done()
 
 
@@ -297,13 +307,18 @@ def _run_threads(options, tasks, num_jobs):
     for task in tasks:
         task_queue.put(task)
 
+    # Make a queue for error returns so we can exit with an appropriate code
+    error_queue = queue.Queue(len(tasks))
+
     # Launch a set of threads to run tasks in parallel
     num_jobs = min(num_jobs, task_queue.qsize())
     lock = threading.Lock()
     threads = []
     for _ in range(num_jobs):
         thread = threading.Thread(
-            target=_task_thread, args=(task_queue, options, lock), daemon=True
+            target=_task_thread,
+            args=(task_queue, error_queue, options, lock),
+            daemon=True,
         )
 
         thread.start()
@@ -313,6 +328,8 @@ def _run_threads(options, tasks, num_jobs):
     task_queue.join()
     for thread in threads:
         thread.join()
+
+    return 0 if error_queue.empty() else 1
 
 
 def _filter_files(sources, headers, exclude_patterns):
@@ -566,7 +583,7 @@ def run(build_dir, **kwargs):
         for header in headers:
             tasks += [_Task(_run_clang_tidy, header, None)]
 
-    _run_threads(
+    ret = _run_threads(
         _Options(
             config["auto_headers"],
             build_dir,
@@ -580,6 +597,8 @@ def run(build_dir, **kwargs):
 
     _message("Leaving directory `%s'" % os.path.abspath(build_dir))
     os.chdir(orig_cwd)
+
+    return ret
 
 
 def main():
@@ -674,7 +693,7 @@ def main():
         sys.exit(0)
 
     try:
-        run(**vars(args))
+        sys.exit(run(**vars(args)))
     except (ConfigurationError, FileNotFoundError) as error:
         sys.stderr.write("clant: error: %s\n" % error)
         sys.exit(1)
