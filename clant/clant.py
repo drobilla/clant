@@ -44,14 +44,14 @@ _Task = collections.namedtuple("Task", ["func", "source", "command"])
 def _message(string):
     """Print an informative message to the console."""
 
-    sys.stdout.write("clant: %s\n" % string)
+    sys.stdout.write(f"clant: {string}\n")
     sys.stdout.flush()
 
 
 def _warning(string):
     """Print a warning message to the console."""
 
-    sys.stderr.write("clant: warning: %s\n" % string)
+    sys.stderr.write(f"clant: warning: {string}\n")
     sys.stderr.flush()
 
 
@@ -59,7 +59,7 @@ def _run_command(options, cmd):
     """Run a command and return a CompletedProcess with captured output."""
 
     if options.verbose:
-        sys.stdout.write("%s\n" % shlex.join(cmd))
+        sys.stdout.write(f"{shlex.join(cmd)}\n")
 
     return subprocess.run(cmd, capture_output=True, check=False)
 
@@ -71,7 +71,7 @@ def _load_compdb(path):
     It is assumed that the current directory is already the build directory.
     """
 
-    _message("Loading compilation database `%s'" % path)
+    _message(f"Loading compilation database `{path}'")
 
     with open("compile_commands.json", "r") as compdb_file:
         return json.load(compdb_file)
@@ -163,8 +163,8 @@ def _run_clang_tidy(options, source, command, lock):
 
     if options.auto_headers:
         extensions = _header_extensions(source)
-        pattern = "|".join(["^\\.\\./.*\\.%s$" % x for x in extensions])
-        cmd += ["--header-filter=%s" % pattern]
+        pattern = "|".join([f"^\\.\\./.*\\.{x for x in extensions}$"])
+        cmd += [f"--header-filter={pattern}"]
 
     cmd += [source]
 
@@ -172,9 +172,9 @@ def _run_clang_tidy(options, source, command, lock):
 
     with lock:
         if proc.returncode == 0:
-            sys.stdout.write("%s:1:1: note: code is tidy\n" % source)
+            sys.stdout.write(f"{source}:1:1: note: code is tidy\n")
         else:
-            print("%s:1:1: error: clang-tidy issues from here:" % source)
+            print(f"{source}:1:1: error: clang-tidy issues from here:")
 
         if len(proc.stdout) > 0:
             sys.stdout.write(proc.stdout.decode("utf-8"))
@@ -212,7 +212,7 @@ def _iwyu_output_formatter(output):
         match = correct_re.match(line)
         if match:
             path = match.group(1)
-            result.append("%s:1:1: note: includes are correct" % path)
+            result.append(f"{path}:1:1: note: includes are correct")
             return (General(), True)
 
         match = should_add_re.match(line)
@@ -239,15 +239,13 @@ def _iwyu_output_formatter(output):
             result.append(line)
         elif isinstance(state, Add):
             has_errors = True
-            result.append("%s:1:1: error: add the following line" % state.path)
+            result.append(f"{state.path}:1:1: error: add the following line")
             result.append(line)
         elif isinstance(state, Remove):
             has_errors = True
             match = lines_re.match(line)
             line = match.group(2) if match else "1"
-            result.append(
-                "%s:%s:1: error: remove this line" % (state.path, line)
-            )
+            result.append(f"{state.path}:{line}:1: error: remove this line")
             result.append(match.group(1))
 
     return (result, has_errors)
@@ -282,7 +280,7 @@ def _run_iwyu(options, source, command, lock):
 
     with lock:
         if len(sensible_output) == 0:
-            print("%s:1:1: warning: include-what-you-use failed" % source)
+            print(f"{source}:1:1: warning: include-what-you-use failed")
         else:
             print(os.linesep.join(sensible_output))
 
@@ -368,17 +366,17 @@ def find_mapping_file(project_dir, name):
 
     in_project = os.path.join(project_dir, name)
     if os.path.exists(in_project):
-        _message("Using mapping file `%s'" % in_project)
+        _message(f"Using mapping file `{in_project}'")
         return in_project
 
     iwyu_path = shutil.which("include-what-you-use")
     prefix = os.path.dirname(os.path.dirname(iwyu_path))
     on_system = os.path.join(prefix, "share", "include-what-you-use", name)
     if os.path.exists(on_system):
-        _message("Using mapping file `%s'" % on_system)
+        _message(f"Using mapping file `{on_system}'")
         return on_system
 
-    raise FileNotFoundError("Could not find mapping file `%s'" % name)
+    raise FileNotFoundError(f"Could not find mapping file `{name}'")
 
 
 def _default_configuration():
@@ -402,9 +400,7 @@ def _parse_version(version_string):
 
     version = list(map(int, version_string.split(".")))
     if len(version) != 3:
-        raise ConfigurationError(
-            "Invalid version number `%s'" % version_string
-        )
+        raise ConfigurationError(f"Invalid version number `{version_string}'")
 
     return version
 
@@ -427,7 +423,7 @@ def _update_configuration(config, update):
             if value is not None:
                 config[key] += value
         elif key != "version":
-            _warning("Unknown configuration key `%s'" % key)
+            _warning(f"Unknown configuration key `{key}'")
 
     return config
 
@@ -440,20 +436,20 @@ def _load_configuration(config_path):
     the file.
     """
 
-    _message("Loading configuration `%s'" % config_path)
+    _message(f"Loading configuration `{config_path}'")
     project_dir = os.path.dirname(config_path)
 
     def check_type(key, value, required_type):
         if not isinstance(value, required_type):
             raise ConfigurationError(
-                "Value for `%s' is not a %s" % (key, required_type.__name__)
+                f"Value for `{key}' is not a {required_type.__name__}"
             )
 
     def check_element_type(key, value, required_type):
         for element in value:
             if not isinstance(element, required_type):
                 raise ConfigurationError(
-                    "Value in `%s' is not a %s" % (key, required_type.__name__)
+                    f"Value in `{key}' is not a {required_type.__name__}"
                 )
 
     with open(config_path, "r") as config_file:
@@ -464,10 +460,7 @@ def _load_configuration(config_path):
 
         config_version = file_config["version"]
         if _parse_version(config_version) > _parse_version(__version__):
-            _warning(
-                "Configuration version %s is newer than %s"
-                % (config_version, __version__)
-            )
+            _warning(f"Configuration version {config_version} > {__version__}")
 
         for key, value in file_config.items():
             if key == "auto_headers":
@@ -490,7 +483,7 @@ def _load_configuration(config_path):
             elif key == "verbose":
                 check_type(key, value, bool)
             elif key != "version":
-                _warning("Unknown configuration key `%s'" % key)
+                _warning(f"Unknown configuration key `{key}'")
 
         return file_config
 
@@ -549,7 +542,7 @@ def run(build_dir, **kwargs):
 
     # Move into the build directory
     orig_cwd = os.getcwd()
-    _message("Entering directory `%s'" % os.path.abspath(build_dir))
+    _message(f"Entering directory `{os.path.abspath(build_dir)}'")
     os.chdir(build_dir)
 
     # Make include dirs relative to the build for consistency with sources
@@ -597,7 +590,7 @@ def run(build_dir, **kwargs):
         config["jobs"],
     )
 
-    _message("Leaving directory `%s'" % os.path.abspath(build_dir))
+    _message(f"Leaving directory `{os.path.abspath(build_dir)}'")
     os.chdir(orig_cwd)
 
     return ret
@@ -691,13 +684,13 @@ def main():
 
     args = parser.parse_args(sys.argv[1:])
     if args.version:
-        print("Clant %s" % __version__)
+        print(f"Clant {__version__}")
         sys.exit(0)
 
     try:
         sys.exit(run(**vars(args)))
     except (ConfigurationError, FileNotFoundError) as error:
-        sys.stderr.write("clant: error: %s\n" % error)
+        sys.stderr.write(f"clant: error: {error}\n")
         sys.exit(1)
 
 
