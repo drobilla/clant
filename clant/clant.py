@@ -56,7 +56,7 @@ def _warning(string):
 
 
 def _run_command(options, cmd):
-    """Run a command and return a CompletexProcess with captured output."""
+    """Run a command and return a CompletedProcess with captured output."""
 
     if options.verbose:
         sys.stdout.write("%s\n" % shlex.join(cmd))
