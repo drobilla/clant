@@ -276,7 +276,9 @@ def _run_iwyu(options, source, command, lock):
 
         proc = _run_command(options, cmd)
 
-    sensible_output, has_errors = _iwyu_output_formatter(proc.stderr.decode("utf-8"))
+    sensible_output, has_errors = _iwyu_output_formatter(
+        proc.stderr.decode("utf-8")
+    )
 
     with lock:
         if len(sensible_output) == 0:
