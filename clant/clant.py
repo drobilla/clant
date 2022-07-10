@@ -73,7 +73,7 @@ def _load_compdb(path):
 
     _message(f"Loading compilation database `{path}'")
 
-    with open("compile_commands.json", "r") as compdb_file:
+    with open("compile_commands.json", "r", encoding="utf-8") as compdb_file:
         return json.load(compdb_file)
 
 
@@ -452,7 +452,7 @@ def _load_configuration(config_path):
                     f"Value in `{key}' is not a {required_type.__name__}"
                 )
 
-    with open(config_path, "r") as config_file:
+    with open(config_path, "r", encoding="utf-8") as config_file:
         file_config = json.load(config_file)
 
         if "version" not in file_config:
