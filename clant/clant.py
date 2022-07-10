@@ -191,11 +191,6 @@ def _iwyu_output_formatter(output):
 
     result = []
 
-    correct_re = re.compile(r"^\((.*?) has correct #includes/fwd-decls\)$")
-    should_add_re = re.compile(r"^(.*?) should add these lines:$")
-    should_remove_re = re.compile(r"^(.*?) should remove these lines:$")
-    lines_re = re.compile(r"^- (.*?)  // lines ([0-9]+)-[0-9]+$")
-
     # States for parsing context
     General = collections.namedtuple("General", [])
     Add = collections.namedtuple("Add", ["path"])
@@ -203,6 +198,10 @@ def _iwyu_output_formatter(output):
     List = collections.namedtuple("List", [])
 
     def next_state(state, line):
+        correct_re = re.compile(r"^\((.*?) has correct #includes/fwd-decls\)$")
+        should_add_re = re.compile(r"^(.*?) should add these lines:$")
+        should_remove_re = re.compile(r"^(.*?) should remove these lines:$")
+
         if line == "---":
             return (General(), True)
 
@@ -224,6 +223,8 @@ def _iwyu_output_formatter(output):
             return (Remove(match.group(1)), True)
 
         return (state, False)
+
+    lines_re = re.compile(r"^- (.*?)  // lines ([0-9]+)-[0-9]+$")
 
     state = General()
     has_errors = False
