@@ -22,7 +22,7 @@ __author__ = "David Robillard"
 __date__ = "2020-12-13"
 __email__ = "d@drobilla.net"
 __license__ = "ISC"
-__version__ = "1.0.2"
+__version__ = "1.0.4"
 
 
 class ConfigurationError(RuntimeError):
