@@ -6,8 +6,8 @@ C++ code with the clang-based tools [clang-tidy][] and
 [include-what-you-use][].
 
 Though these tools are helpful, they can be tricky to configure correctly.  For
-example, checks in headers can be mistakenly skipped, mixing C and C++ code can
-be a hassle, and the interface and output of the bundled wrapper scripts are
+example, it is tricky to run checks in headers, mixing C and C++ code can be a
+hassle, and the interface and output of the bundled wrapper scripts are
 inconsistent.
 
 Clant aims to handle all of these details and provide a simple interface for
@@ -163,6 +163,7 @@ from clant import clant
 clant.run(auto_headers=True,
           build_dir="build",
           exclude_patterns=[".*gen.*"],
+          headers=False,
           iwyu=False,
           jobs=4,
           mapping_files=["qt5_11.imp"],
@@ -189,6 +190,7 @@ For example, this configuration uses all of the supported keys:
   "auto_headers": true,
   "build_dir": "release",
   "exclude_patterns": [".*gen.*"],
+  "headers": false,
   "iwyu": false,
   "jobs": 4,
   "mapping_files": ["qt5_11.imp"],

@@ -22,7 +22,7 @@ __author__ = "David Robillard"
 __date__ = "2020-12-13"
 __email__ = "d@drobilla.net"
 __license__ = "ISC"
-__version__ = "1.0.4"
+__version__ = "1.1.0"
 
 
 class ConfigurationError(RuntimeError):
@@ -35,7 +35,14 @@ class ConfigurationError(RuntimeError):
 # Options that may be used by a task
 _Options = collections.namedtuple(
     "Options",
-    ["auto_headers", "build_dir", "include_flags", "mapping_files", "verbose"],
+    [
+        "auto_headers",
+        "build_dir",
+        "headers",
+        "include_flags",
+        "mapping_files",
+        "verbose",
+    ],
 )
 
 _Task = collections.namedtuple("Task", ["func", "source", "command"])
@@ -268,11 +275,6 @@ def _run_iwyu(options, source, command, lock):
         # Run on normal source file with a compile command
         cmd += command[1:]
 
-        # Include headers in the same language
-        # This avoids things like suggesting to remove stdbool.h in C headers
-        for extension in _header_extensions(source):
-            cmd += ["-Xiwyu", "--check_also=../*." + extension]
-
         proc = _run_command(options, cmd)
 
     sensible_output, has_errors = _iwyu_output_formatter(
@@ -387,6 +389,7 @@ def _default_configuration():
         "auto_headers": True,
         "build_dir": "build",
         "exclude_patterns": [],
+        "headers": True,
         "include_dirs": [],
         "iwyu": True,
         "jobs": multiprocessing.cpu_count(),
@@ -413,6 +416,7 @@ def _update_configuration(config, update):
         if key in [
             "auto_headers",
             "build_dir",
+            "headers",
             "iwyu",
             "tidy",
             "jobs",
@@ -468,6 +472,8 @@ def _load_configuration(config_path):
                 check_type(key, value, bool)
             elif key == "build_dir":
                 check_type(key, value, str)
+            elif key == "headers":
+                check_type(key, value, bool)
             elif key in ["exclude_patterns", "include_dirs"]:
                 check_type(key, value, list)
                 check_element_type(key, value, str)
@@ -514,8 +520,9 @@ def run(build_dir, **kwargs):
     """
     Run checks on an entire project.
 
-    :param bool auto_headers: Automatically include matching language headers
-    in checks.
+    :param bool auto_headers: Filter clang-tidy checks to headers that match the source language.
+
+    :param bool headers: Run checks on individual headers.
 
     :param str build_dir: Path to build directory.
 
@@ -569,20 +576,23 @@ def run(build_dir, **kwargs):
         for source in sources:
             tasks += [_Task(_run_iwyu, source, commands[source])]
 
-        for header in headers:
-            tasks += [_Task(_run_iwyu, header, None)]
+        if config["headers"]:
+            for header in headers:
+                tasks += [_Task(_run_iwyu, header, None)]
 
     if config["tidy"]:
         for source in sources:
             tasks += [_Task(_run_clang_tidy, source, commands[source])]
 
-        for header in headers:
-            tasks += [_Task(_run_clang_tidy, header, None)]
+        if config["headers"]:
+            for header in headers:
+                tasks += [_Task(_run_clang_tidy, header, None)]
 
     ret = _run_threads(
         _Options(
             config["auto_headers"],
             build_dir,
+            config["headers"],
             _get_include_flags(commands),
             config["mapping_files"],
             config["verbose"],
@@ -646,6 +656,13 @@ def main():
         dest="auto_headers",
         action="store_false",
         help="don't override clang-tidy header regex based on language",
+    )
+
+    parser.add_argument(
+        "--headers",
+        dest="headers",
+        action="store_true",
+        help="run tools on individual headers",
     )
 
     parser.add_argument(

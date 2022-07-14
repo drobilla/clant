@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="clant",
-    version="1.0.4",
+    version="1.1.0",
     description="A unified frontend for clang linting tools",
     long_description=open('README.md', 'r').read(),
     long_description_content_type='text/markdown',
