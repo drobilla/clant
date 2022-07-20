@@ -170,7 +170,7 @@ def _run_clang_tidy(options, source, command, lock):
 
     if options.auto_headers:
         extensions = _header_extensions(source)
-        pattern = "|".join([f"^\\.\\./.*\\.{x for x in extensions}$"])
+        pattern = "|".join([f".*\\.{x}$" for x in extensions])
         cmd += [f"--header-filter={pattern}"]
 
     cmd += [source]
