@@ -506,6 +506,10 @@ def _get_configuration(project_dir, args):
     # Start with the default configuration
     config = _default_configuration()
 
+    # Add top-level "include' directory to include_dirs if present
+    if os.path.isdir(os.path.join(project_dir, "include")):
+        config["include_dirs"] = [os.path.join(project_dir, "include")]
+
     # Update with values from configuration file if present
     config_path = os.path.join(project_dir, ".clant.json")
     if os.path.exists(config_path):
