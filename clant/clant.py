@@ -139,7 +139,6 @@ def _get_header_files(include_dirs):
         headers += glob.glob(path + "/**/*.h", recursive=True)
         headers += glob.glob(path + "/**/*.hh", recursive=True)
         headers += glob.glob(path + "/**/*.hpp", recursive=True)
-        headers += glob.glob(path + "/**/*.ipp", recursive=True)
 
     return headers
 
@@ -151,7 +150,7 @@ def _header_extensions(source):
         return ["h"]
 
     if source.endswith(".cpp") or source.endswith(".cc"):
-        return ["hpp", "hh", "ipp"]
+        return ["hpp", "hh"]
 
     return []
 
