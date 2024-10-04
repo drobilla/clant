@@ -523,14 +523,15 @@ def run(build_dir, **kwargs):
     """
     Run checks on an entire project.
 
-    :param bool auto_headers: Filter clang-tidy checks to headers that match the source language.
+    :param bool auto_headers: Filter clang-tidy checks to headers that match
+    the source language.
 
     :param bool headers: Run checks on individual headers.
 
     :param str build_dir: Path to build directory.
 
     :param str exclude_patterns: List of regular expressions for files to
-                                 exclude from checks.
+    exclude from checks.
 
     :param bool iwyu: Run include-what-you-use.
 
