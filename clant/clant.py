@@ -38,6 +38,7 @@ _Options = collections.namedtuple(
     [
         "auto_headers",
         "build_dir",
+        "fix",
         "headers",
         "include_flags",
         "mapping_files",
@@ -166,6 +167,9 @@ def _run_clang_tidy(options, source, command, lock):
         "--quiet",
         "-p=.",
     ]
+
+    if options.fix:
+        cmd += ["--fix"]
 
     if options.auto_headers:
         extensions = _header_extensions(source)
@@ -388,6 +392,7 @@ def _default_configuration():
         "auto_headers": True,
         "build_dir": "build",
         "exclude_patterns": [],
+        "fix": False,
         "headers": True,
         "include_dirs": [],
         "iwyu": True,
@@ -415,6 +420,7 @@ def _update_configuration(config, update):
         if key in [
             "auto_headers",
             "build_dir",
+            "fix",
             "headers",
             "iwyu",
             "tidy",
@@ -467,17 +473,13 @@ def _load_configuration(config_path):
             _warning(f"Configuration version {config_version} > {__version__}")
 
         for key, value in file_config.items():
-            if key == "auto_headers":
+            if key in ["auto_headers", "fix", "headers", "iwyu", "tidy", "verbose"]:
                 check_type(key, value, bool)
             elif key == "build_dir":
                 check_type(key, value, str)
-            elif key == "headers":
-                check_type(key, value, bool)
             elif key in ["exclude_patterns", "include_dirs"]:
                 check_type(key, value, list)
                 check_element_type(key, value, str)
-            elif key in ["iwyu", "tidy"]:
-                check_type(key, value, bool)
             elif key == "jobs":
                 check_type(key, value, int)
             elif key == "mapping_files":
@@ -486,8 +488,6 @@ def _load_configuration(config_path):
                 file_config[key] = [
                     find_mapping_file(project_dir, f) for f in value
                 ]
-            elif key == "verbose":
-                check_type(key, value, bool)
             elif key != "version":
                 _warning(f"Unknown configuration key `{key}'")
 
@@ -532,6 +532,8 @@ def run(build_dir, **kwargs):
 
     :param str exclude_patterns: List of regular expressions for files to
     exclude from checks.
+
+    :param str fix: Try to fix issues automatically.
 
     :param bool iwyu: Run include-what-you-use.
 
@@ -596,6 +598,7 @@ def run(build_dir, **kwargs):
         _Options(
             config["auto_headers"],
             build_dir,
+            config["fix"],
             config["headers"],
             _get_include_flags(commands),
             config["mapping_files"],
@@ -627,6 +630,13 @@ def main():
         default=[],
         action="append",
         help="regular expression for files to ignore",
+    )
+
+    parser.add_argument(
+        "--fix",
+        dest="fix",
+        action="store_true",
+        help="try to fix issues automatically",
     )
 
     parser.add_argument(
