@@ -168,6 +168,9 @@ def _run_clang_tidy(options, source, command, lock):
         "-p=.",
     ]
 
+    if command is None:
+        cmd += ["-checks=-clang-diagnostic-unused-macros"]
+
     if options.fix:
         cmd += ["--fix"]
 
