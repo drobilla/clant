@@ -31,7 +31,7 @@ Using Clant looks something like this:
     ../src/mylib.c:576:1: note: the definition seen here
     run(Thing* out)
     ^
-    ../src/rerex.c:239:1: note: differing parameters are named here: ('result'), in definition: ('out')
+    ../src/mylib.c:239:1: note: differing parameters are named here: ('result'), in definition: ('out')
     run(Something* result);
     ^              ~~~~~~
                    out
