@@ -6,7 +6,6 @@ Check for C and C++ code issues with clang-based tools.
 
 import argparse
 import collections
-import glob
 import json
 import multiprocessing
 import os
@@ -19,7 +18,7 @@ import sys
 import threading
 
 __author__ = "David Robillard"
-__date__ = "2020-12-13"
+__date__ = "2025-01-20"
 __email__ = "d@drobilla.net"
 __license__ = "ISC"
 __version__ = "1.1.0"
@@ -36,12 +35,10 @@ class ConfigurationError(RuntimeError):
 _Options = collections.namedtuple(
     "Options",
     [
-        "auto_headers",
         "build_dir",
         "fix",
-        "headers",
-        "include_flags",
         "mapping_files",
+        "project_dir",
         "verbose",
     ],
 )
@@ -107,41 +104,10 @@ def _get_compile_commands(compdb):
     return commands
 
 
-def _get_include_flags(commands):
-    """
-    Return a list of all include flags used in the compilation.
-
-    This is used to be able to run tools on individual headers, which don't
-    have an associated compile command to use directly.  It assumes that there
-    are no clashing includes and that it makes sense to mash all the include
-    directories together.
-    """
-
-    include_flags = set()
-    for _, command in commands.items():
-        flags = [f for f in command if f.startswith("-I")]
-        for flag in flags:
-            include_flags.add(flag)
-
-    return list(include_flags)
-
-
 def _get_source_files(commands):
     """Return a list of all source files in the compilation."""
 
     return list(commands.keys())
-
-
-def _get_header_files(include_dirs):
-    """Return a list of all extra headers to include in checks."""
-
-    headers = []
-    for path in include_dirs:
-        headers += glob.glob(path + "/**/*.h", recursive=True)
-        headers += glob.glob(path + "/**/*.hh", recursive=True)
-        headers += glob.glob(path + "/**/*.hpp", recursive=True)
-
-    return headers
 
 
 def _header_extensions(source):
@@ -159,8 +125,6 @@ def _header_extensions(source):
 def _run_clang_tidy(options, source, command, lock):
     """Run clang-tidy on a file in a thread."""
 
-    # pylint: disable=unused-argument
-
     cmd = [
         "clang-tidy",
         '--warnings-as-errors="*"',
@@ -173,11 +137,6 @@ def _run_clang_tidy(options, source, command, lock):
 
     if options.fix:
         cmd += ["--fix"]
-
-    if options.auto_headers:
-        extensions = _header_extensions(source)
-        pattern = "|".join([f".*\\.{x}$" for x in extensions])
-        cmd += [f"--header-filter={pattern}"]
 
     cmd += [source]
 
@@ -273,15 +232,14 @@ def _run_iwyu(options, source, command, lock):
     for mapping_file in options.mapping_files:
         cmd += ["-Xiwyu", "--mapping_file=" + mapping_file]
 
-    if command is None:
-        # Run on extra header using the aggregated include flags
-        cmd += options.include_flags + [source]
-        proc = _run_command(options, cmd)
-    else:
+    if command is not None:
         # Run on normal source file with a compile command
         cmd += command[1:]
 
         proc = _run_command(options, cmd)
+    else:
+        # Attempt to run directly on a header (only works with clang-tidy)
+        raise RuntimeError("Missing compile command for include-what-you-use")
 
     sensible_output, has_errors = _iwyu_output_formatter(
         proc.stderr.decode("utf-8")
@@ -341,7 +299,7 @@ def _run_threads(options, tasks, num_jobs):
     return 0 if error_queue.empty() else 1
 
 
-def _filter_files(sources, headers, exclude_patterns):
+def _filter_files(sources, exclude_patterns):
     """
     Filter out files that should not be checked.
 
@@ -352,13 +310,12 @@ def _filter_files(sources, headers, exclude_patterns):
     if len(exclude_patterns) > 0:
         exclude_re = re.compile("|".join(exclude_patterns))
         sources = [s for s in sources if not exclude_re.search(s)]
-        headers = [h for h in headers if not exclude_re.search(h)]
 
     # Filter out sources in the build directory
     # This avoids checking generated code, configuration checks, and so on
     sources = [s for s in sources if s.startswith("..")]
 
-    return (sources, headers)
+    return sources
 
 
 def find_mapping_file(project_dir, name):
@@ -392,15 +349,14 @@ def _default_configuration():
     """Return a default configuration dictionary."""
 
     return {
-        "auto_headers": True,
         "build_dir": "build",
         "exclude_patterns": [],
         "fix": False,
         "headers": True,
-        "include_dirs": [],
         "iwyu": True,
         "jobs": multiprocessing.cpu_count(),
         "mapping_files": [],
+        "project_dir": None,
         "tidy": True,
         "verbose": False,
     }
@@ -421,18 +377,18 @@ def _update_configuration(config, update):
 
     for key, value in update.items():
         if key in [
-            "auto_headers",
             "build_dir",
             "fix",
             "headers",
             "iwyu",
             "tidy",
             "jobs",
+            "project_dir",
             "verbose",
         ]:
             if value is not None:
                 config[key] = value
-        elif key in ["mapping_files", "exclude_patterns", "include_dirs"]:
+        elif key in ["mapping_files", "exclude_patterns"]:
             if value is not None:
                 config[key] += value
         elif key != "version":
@@ -476,11 +432,17 @@ def _load_configuration(config_path):
             _warning(f"Configuration version {config_version} > {__version__}")
 
         for key, value in file_config.items():
-            if key in ["auto_headers", "fix", "headers", "iwyu", "tidy", "verbose"]:
+            if key in [
+                "fix",
+                "headers",
+                "iwyu",
+                "tidy",
+                "verbose",
+            ]:
                 check_type(key, value, bool)
-            elif key == "build_dir":
+            elif key in ["build_dir", "project_dir"]:
                 check_type(key, value, str)
-            elif key in ["exclude_patterns", "include_dirs"]:
+            elif key in ["exclude_patterns"]:
                 check_type(key, value, list)
                 check_element_type(key, value, str)
             elif key == "jobs":
@@ -508,10 +470,6 @@ def _get_configuration(project_dir, args):
     # Start with the default configuration
     config = _default_configuration()
 
-    # Add top-level "include' directory to include_dirs if present
-    if os.path.isdir(os.path.join(project_dir, "include")):
-        config["include_dirs"] = [os.path.join(project_dir, "include")]
-
     # Update with values from configuration file if present
     config_path = os.path.join(project_dir, ".clant.json")
     if os.path.exists(config_path):
@@ -526,11 +484,6 @@ def run(build_dir, **kwargs):
     """
     Run checks on an entire project.
 
-    :param bool auto_headers: Filter clang-tidy checks to headers that match
-    the source language.
-
-    :param bool headers: Run checks on individual headers.
-
     :param str build_dir: Path to build directory.
 
     :param str exclude_patterns: List of regular expressions for files to
@@ -544,6 +497,8 @@ def run(build_dir, **kwargs):
 
     :param list mapping_files: List of IWYU mapping filenames.
 
+    :param str project_dir: Path to project root directory.
+
     :param bool tidy: Run clang-tidy.
 
     :param bool verbose: Print all executed commands.
@@ -552,31 +507,18 @@ def run(build_dir, **kwargs):
     project_dir = os.path.dirname(os.path.abspath(build_dir))
     config = _get_configuration(project_dir, kwargs)
 
-    # Get a list of absolute paths to all extra include dirs
-    include_dirs = config["include_dirs"]
-    if len(include_dirs) > 0:
-        include_dirs = [os.path.abspath(d) for d in include_dirs]
-
     # Move into the build directory
     orig_cwd = os.getcwd()
     _message(f"Entering directory `{os.path.abspath(build_dir)}'")
     os.chdir(build_dir)
-
-    # Make include dirs relative to the build for consistency with sources
-    include_dirs = [os.path.relpath(d) for d in include_dirs]
 
     # Load compile commands from compilation database
     compdb = _load_compdb("compile_commands.json")
     commands = _get_compile_commands(compdb)
     sources = _get_source_files(commands)
 
-    # Get extra header files to check
-    headers = _get_header_files(include_dirs)
-
     # Filter out excluded files and files in the build directory
-    sources, headers = _filter_files(
-        sources, headers, config["exclude_patterns"]
-    )
+    sources = _filter_files(sources, config["exclude_patterns"])
 
     # Generate list of all tasks
     tasks = []
@@ -585,26 +527,16 @@ def run(build_dir, **kwargs):
         for source in sources:
             tasks += [_Task(_run_iwyu, source, commands[source])]
 
-        if config["headers"]:
-            for header in headers:
-                tasks += [_Task(_run_iwyu, header, None)]
-
     if config["tidy"]:
         for source in sources:
             tasks += [_Task(_run_clang_tidy, source, commands[source])]
 
-        if config["headers"]:
-            for header in headers:
-                tasks += [_Task(_run_clang_tidy, header, None)]
-
     ret = _run_threads(
         _Options(
-            config["auto_headers"],
             build_dir,
             config["fix"],
-            config["headers"],
-            _get_include_flags(commands),
             config["mapping_files"],
+            project_dir,
             config["verbose"],
         ),
         tasks,
@@ -643,15 +575,6 @@ def main():
     )
 
     parser.add_argument(
-        "--include",
-        metavar="DIR",
-        dest="include_dirs",
-        default=[],
-        action="append",
-        help="directory of extra headers to check",
-    )
-
-    parser.add_argument(
         "-j",
         metavar="JOBS",
         dest="jobs",
@@ -666,20 +589,6 @@ def main():
         default=[],
         action="append",
         help="add include-what-you-use mapping file",
-    )
-
-    parser.add_argument(
-        "--no-auto-headers",
-        dest="auto_headers",
-        action="store_false",
-        help="don't override clang-tidy header regex based on language",
-    )
-
-    parser.add_argument(
-        "--headers",
-        dest="headers",
-        action="store_true",
-        help="run tools on individual headers",
     )
 
     parser.add_argument(

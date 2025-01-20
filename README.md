@@ -24,7 +24,7 @@ Using Clant looks something like this:
     $ clant
     clant: Entering directory `/mylib/build'
     clant: Loading compilation database `compile_commands.json'
-    ../include/mylib/mylib.h:1:1: note: includes are correct
+    ../src/mylib.c:1:1: note: includes are correct
     ../src/mylib.c:239:1: error: function 'run' has a definition with different parameter names [readability-inconsistent-declaration-parameter-name,-warnings-as-errors]
     run(Thing* result);
     ^
@@ -81,16 +81,6 @@ working on issues:
     clant --no-tidy
     clant --no-iwyu
 
-### Checking Headers
-
-Clant attempts to run tools in a way that automatically includes appropriate
-headers in checks, but this may miss headers that are not included in the
-build, or that are not inside the project directory.  Additional headers can be
-checked by providing include directories with the `--include` option.
-This will run checks on all the headers in that directory, recursively:
-
-    clant --include include
-
 ### Include Mapping Files
 
 [Mapping files][] are supported by include-what-you-use to specify include file
@@ -124,24 +114,8 @@ root, and enable or suppress any warnings there.
 To be more fine-grained, for example to specify stricter warnings for headers
 than implementations, separate files can be used.  The `.clang-tidy` file in
 the closest parent directory to the source being checked will be used.  Note,
-however, that `clang-tidy` does not check headers on their own by default, and
-that included headers will be checked using the settings for that compilation
-(including the language), not the `.clang-tidy` file associated with the
-header.
-
-This can be especially tricky for projects that contain both C and C++.  To get
-around this problem, unless the `--no-auto-headers` option is given, Clant
-automatically includes headers of the matching language based on their
-extension, which overrides the `HeaderFilterRegex` option in the `.clang-tidy`
-file.  This prevents C++ warnings from being produced for C headers, or
-vice-versa.  For C sources with extension `.c`, any included `.h` files within
-the project are checked.  For C++ sources with extension `.cpp` or `.cc`, any
-included `.hh`, `.hpp`, or `.ipp` files within the project are checked.
-
-The extra headers given with the `--include` option are always checked on their
-own, avoiding these issues.  Since there is no associated command in the
-compilation database for headers, Clant combines all of the include paths given
-to any compile command to run tools on these headers.
+however, that headers aren't checked on their own, but only while checking
+files that include them, depending on the configuration.
 
 Using from Python
 -----------------
@@ -187,16 +161,14 @@ For example, this configuration uses all of the supported keys:
 
 ```json
 {
-  "auto_headers": true,
   "build_dir": "release",
   "exclude_patterns": [".*gen.*"],
-  "headers": false,
   "iwyu": false,
   "jobs": 4,
   "mapping_files": ["qt5_11.imp"],
   "tidy": true,
   "verbose": false,
-  "version": "1.0.0"
+  "version": "2.0.0"
 }
 ```
 
@@ -216,18 +188,6 @@ opinionated tool that assumes a few things for ease of use:
 
   - The build directory contains a valid [JSON Compilation Database][] named
     `compile_commands.json`.
-
-  - For the auto headers feature:
-
-    - C sources have extension `.c`, C headers have extension `.h`.
-
-    - C++ sources have extension `.cpp` or `.cc`, C++ headers have extension
-      `.hpp`, `.hh`, or `.ipp`.
-
-  - For checking extra headers:
-
-    - Headers can be "compiled" by including every `-I` given to every compile
-      command, so there are no conflicting header names.
 
 Feel free to submit a patch if any of these are problematic for you.
 
