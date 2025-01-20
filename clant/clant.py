@@ -505,11 +505,12 @@ def run(build_dir, **kwargs):
     """
 
     project_dir = os.path.dirname(os.path.abspath(build_dir))
+    abs_build_dir = os.path.abspath(build_dir)
     config = _get_configuration(project_dir, kwargs)
 
     # Move into the build directory
     orig_cwd = os.getcwd()
-    _message(f"Entering directory `{os.path.abspath(build_dir)}'")
+    _message(f"Entering directory `{abs_build_dir}'")
     os.chdir(build_dir)
 
     # Load compile commands from compilation database
@@ -543,7 +544,7 @@ def run(build_dir, **kwargs):
         config["jobs"],
     )
 
-    _message(f"Leaving directory `{os.path.abspath(build_dir)}'")
+    _message(f"Leaving directory `{abs_build_dir}'")
     os.chdir(orig_cwd)
 
     return ret
